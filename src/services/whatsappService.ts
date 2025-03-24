@@ -1,11 +1,35 @@
 import { Message, MessageStatus } from '@/types';
 
 /**
+ * WhatsApp API response interfaces
+ */
+interface WhatsAppApiResponse {
+  messaging_product: string;
+  contacts: Array<{
+    input: string;
+    wa_id: string;
+  }>;
+  messages: Array<{
+    id: string;
+  }>;
+}
+
+interface WhatsAppErrorResponse {
+  error: {
+    message: string;
+    type: string;
+    code: number;
+    error_subcode?: number;
+    fbtrace_id: string;
+  };
+}
+
+/**
  * Service for interacting with the WhatsApp Business API
  */
 export class WhatsAppService {
-  private accessToken: string;
-  private phoneNumberId: string;
+  readonly accessToken: string;
+  readonly phoneNumberId: string;
   
   constructor(accessToken: string, phoneNumberId: string) {
     this.accessToken = accessToken;
@@ -18,7 +42,7 @@ export class WhatsAppService {
    * @param text Message text content
    * @returns Promise with the API response
    */
-  async sendTextMessage(to: string, text: string): Promise<any> {
+  async sendTextMessage(to: string, text: string): Promise<WhatsAppApiResponse> {
     try {
       // Format the phone number if needed
       const formattedPhone = to.startsWith('+') ? to : `+${to}`;
@@ -42,11 +66,11 @@ export class WhatsAppService {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as WhatsAppErrorResponse;
         throw new Error(`WhatsApp API error: ${JSON.stringify(errorData)}`);
       }
       
-      return await response.json();
+      return await response.json() as WhatsAppApiResponse;
     } catch (error) {
       console.error('Error sending WhatsApp message:', error);
       throw error;
@@ -58,7 +82,7 @@ export class WhatsAppService {
    * @param messageId The ID of the message to mark as read
    * @returns Promise with the API response
    */
-  async markMessageAsRead(messageId: string): Promise<any> {
+  async markMessageAsRead(messageId: string): Promise<WhatsAppApiResponse> {
     try {
       const response = await fetch(`https://graph.facebook.com/v18.0/${this.phoneNumberId}/messages`, {
         method: 'POST',
@@ -74,11 +98,11 @@ export class WhatsAppService {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as WhatsAppErrorResponse;
         throw new Error(`WhatsApp API error: ${JSON.stringify(errorData)}`);
       }
       
-      return await response.json();
+      return await response.json() as WhatsAppApiResponse;
     } catch (error) {
       console.error('Error marking message as read:', error);
       throw error;
