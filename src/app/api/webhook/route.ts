@@ -1,47 +1,71 @@
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/webhook/route.ts
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    console.log("Webhook received:", JSON.stringify(body, null, 2));
+    // Parse the raw request body
+    const rawBody = await request.text();
+    console.log('Raw Webhook Payload:', rawBody);
 
-    // Verify the request has a valid payload
-    if (!body.entry || !body.entry[0]?.changes) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    // Parse the JSON
+    let data;
+    try {
+      data = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error('Failed to parse webhook payload:', parseError);
+      return new Response('Invalid JSON payload', { status: 400 });
     }
 
-    // Extract message details
-    const message = body.entry[0].changes[0]?.value?.messages?.[0];
-    if (!message) {
-      return NextResponse.json({ message: "No new messages" }, { status: 200 });
+    // Extensive logging
+    console.log('Parsed Webhook Data:', JSON.stringify(data, null, 2));
+
+    if (data && data.object === 'whatsapp_business_account') {
+      for (const entry of data.entry || []) {
+        for (const change of entry.changes || []) {
+          console.log('Change Field:', change.field);
+          console.log('Change Value:', JSON.stringify(change.value, null, 2));
+
+          if (change.field === 'messages') {
+            const value = change.value || {};
+            
+            if (value.messages && Array.isArray(value.messages) && value.messages.length > 0) {
+              for (const message of value.messages) {
+                console.log('Incoming Message:', JSON.stringify(message, null, 2));
+
+                if (message.type === 'text' && message.text) {
+                  try {
+                    const storeResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/messages`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        phoneNumber: message.from,
+                        message: message
+                      }),
+                    });
+
+                    const storeResult = await storeResponse.json();
+                    console.log('Message Storage Result:', storeResult);
+                  } catch (storeError) {
+                    console.error('Error storing message:', storeError);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      return new Response('EVENT_RECEIVED', { 
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
-
-    const senderId = message.from;
-    const text = message.text?.body;
-
-    console.log(`📩 New message from ${senderId}: ${text}`);
-
-    // Respond back to confirm receipt
-    return NextResponse.json({ success: true, message: "Webhook processed" });
+    
+    return new Response('Not a WhatsApp event', { status: 200 });
   } catch (error) {
-    console.error("❌ Error processing webhook:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
-}
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const mode = searchParams.get("hub.mode");
-  const token = searchParams.get("hub.verify_token");
-  const challenge = searchParams.get("hub.challenge");
-
-  const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "your-secret-token";
-
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("✅ Webhook verified successfully!");
-    return new Response(challenge, { status: 200 });
-  } else {
-    console.warn("⚠️ Webhook verification failed!");
-    return NextResponse.json({ error: "Verification failed" }, { status: 403 });
+    console.error('Comprehensive Webhook Error:', error);
+    return new Response('Error processing webhook', { status: 200 });
   }
 }

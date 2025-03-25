@@ -5,7 +5,7 @@ import Image from 'next/image';
 import WhatsAppConfig from '@/components/WhatsAppConfig';
 import ChatList from '@/components/ChatList';
 import ChatWindow from '@/components/ChatWindow';
-import AddRecipientModal from '@/components/AddRecipientModel'; // Change Modal to Model
+import AddRecipientModal from '@/components/AddRecipientModel';
 import { Contact, Message, MessageStatus } from '@/types';
 
 export default function Home() {
@@ -133,6 +133,38 @@ export default function Home() {
       });
     }
   };
+  // Enhanced message fetching with logging
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedContact) return;
+
+      try {
+        console.log(`Fetching messages for phone number: ${selectedContact.phoneNumber}`);
+        
+        const response = await fetch(`/api/messages?phoneNumber=${selectedContact.phoneNumber}`);
+        const data = await response.json();
+        
+        console.log('Fetched Messages:', data);
+        
+        if (data.messages && Array.isArray(data.messages)) {
+          setMessages(prev => ({
+            ...prev,
+            [selectedContact.phoneNumber]: data.messages
+          }));
+          
+          console.log(`Updated messages for ${selectedContact.phoneNumber}:`, 
+            data.messages.length);
+        } else {
+          console.warn('No messages found or invalid response', data);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedContact]);
+
 
   // Mock function to simulate receiving a message
   const simulateIncomingMessage = (contact: Contact, content: string) => {

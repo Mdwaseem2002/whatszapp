@@ -87,6 +87,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             <p className="text-gray-500 bg-white bg-opacity-70 p-3 rounded-lg">
               No messages yet. Start the conversation!
             </p>
+            
           </div>
         ) : (
           messages.map((message) => {

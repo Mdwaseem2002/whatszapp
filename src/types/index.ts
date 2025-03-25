@@ -26,6 +26,7 @@ export interface Contact {
     recipientId: string;
     mediaUrl?: string;
     mediaType?: 'image' | 'audio' | 'video' | 'document';
+    contactPhoneNumber?: string; // Add this field
   }
   
   // WhatsApp configuration settings
@@ -104,4 +105,21 @@ export interface Contact {
       pricing_model: string;
       category: string;
     };
+  }
+
+  
+  export interface Message {
+    id: string;
+    content: string;
+    timestamp: string;
+    sender: 'user' | 'contact';
+    status: MessageStatus;
+  }
+  
+  export interface Contact {
+    id: string;
+    name: string;
+    avatar?: string;
+    lastSeen?: string;
+    phoneNumber: string;
   }
