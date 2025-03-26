@@ -6,19 +6,23 @@ import WhatsAppConfig from '@/components/WhatsAppConfig';
 import ChatList from '@/components/ChatList';
 import ChatWindow from '@/components/ChatWindow';
 import AddRecipientModal from '@/components/AddRecipientModel';
+import { useRealtimeMessages } from '@/app/hooks/useRealtimeMessages';
+
 import { Contact, Message, MessageStatus } from '@/types';
+import { FaCog } from "react-icons/fa";
 
 export default function Home() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const realtimeMessages = useRealtimeMessages(selectedContact);
   const [isConfigured, setIsConfigured] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [config, setConfig] = useState({
     accessToken: '',
     phoneNumberId: ''
   });
-
+  
   // Load config from localStorage on component mount
   useEffect(() => {
     const savedConfig = localStorage.getItem('whatsappConfig');
@@ -38,6 +42,16 @@ export default function Home() {
       setMessages(JSON.parse(savedMessages));
     }
   }, []);
+
+  // Update the messages state when real-time messages change
+  useEffect(() => {
+    if (selectedContact && realtimeMessages.length > 0) {
+      setMessages(prev => ({
+        ...prev,
+        [selectedContact.phoneNumber]: realtimeMessages
+      }));
+    }
+  }, [realtimeMessages, selectedContact]);
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
@@ -84,9 +98,28 @@ export default function Home() {
     // Update messages state with the new message
     setMessages(prev => {
       const contactMessages = prev[selectedContact.phoneNumber] || [];
+      const updatedMessages = [...contactMessages, newMessage];
+      
+      // Also store message on the server
+      fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: selectedContact.phoneNumber,
+          message: {
+            id: newMessage.id,
+            text: { body: content },
+            timestamp: Math.floor(Date.now() / 1000),
+            from: 'user'
+          }
+        })
+      }).catch(error => console.error('Failed to store message:', error));
+
       return {
         ...prev,
-        [selectedContact.phoneNumber]: [...contactMessages, newMessage]
+        [selectedContact.phoneNumber]: updatedMessages
       };
     });
 
@@ -133,6 +166,7 @@ export default function Home() {
       });
     }
   };
+
   // Enhanced message fetching with logging
   useEffect(() => {
     const fetchMessages = async () => {
@@ -191,7 +225,8 @@ export default function Home() {
       {/* Left side - 30% width */}
       <div className="w-3/10 h-full flex flex-col border-r border-gray-300 bg-white">
         {/* WhatsApp logo and config */}
-        <div className="p-4 flex justify-between items-center bg-teal-500 text-white">
+        <div className="p-4 flex justify-between items-center bg-[#075E54] text-white">
+
           <div className="flex items-center">
             <Image 
               src="/whatsapp-logo.png" 
@@ -204,11 +239,11 @@ export default function Home() {
           </div>
           {isConfigured ? (
             <button 
-              onClick={() => setIsConfigured(false)}
-              className="text-sm bg-green-600 px-2 py-1 rounded"
-            >
-              Configure
-            </button>
+            onClick={() => setIsConfigured(false)}
+            className="text-sm bg-green-600 px-2 py-1 rounded text-white flex items-center"
+          >
+            <FaCog className="text-white text-lg" />
+          </button>
           ) : null}
         </div>
 
@@ -220,7 +255,7 @@ export default function Home() {
             <div className="p-4 border-b border-gray-300">
               <button 
                 onClick={() => setShowAddModal(true)}
-                className="w-full bg-green-500 text-white py-2 rounded-md font-medium hover:bg-green-600 transition"
+                className="w-full bg-[#075E54] text-white py-2 rounded-md font-medium hover:bg-green-600 transition"
               >
                 Add Recipient
               </button>
@@ -242,8 +277,9 @@ export default function Home() {
             contact={selectedContact}
             messages={messages[selectedContact.phoneNumber] || []}
             onSendMessage={sendMessage}
-            onSimulateIncoming={() => simulateIncomingMessage(selectedContact, 'This is a test reply')}
-          />
+            onSimulateIncoming={() => simulateIncomingMessage(selectedContact, 'This is a test reply')} onCloseChat={function (): void {
+              throw new Error('Function not implemented.');
+            } }          />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
       <Image 

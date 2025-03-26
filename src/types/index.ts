@@ -123,3 +123,4 @@ export interface Contact {
     lastSeen?: string;
     phoneNumber: string;
   }
+  

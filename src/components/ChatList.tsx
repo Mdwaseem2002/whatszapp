@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 import { Contact, Message } from '@/types';
 import { formatTimestamp } from '@/utils/formatters';
 
@@ -41,36 +40,33 @@ const ChatList: React.FC<ChatListProps> = ({
         contacts.map(contact => {
           const lastMessage = getLastMessage(contact.phoneNumber);
           const isSelected = selectedContact?.id === contact.id;
-          
+          const initials = contact.name
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .slice(0, 2)
+            .join('');
+
           return (
             <div 
               key={contact.id}
               onClick={() => onSelectContact(contact)}
-              className={`p-3 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-50 ${
+              className={`p-4 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-50 ${
                 isSelected ? 'bg-gray-100' : ''
               }`}
             >
-              <div className="relative mr-3">
-                <Image 
-                  src={contact.avatar || '/default-avatar.png'} 
-                  alt={contact.name} 
-                  width={50} 
-                  height={50}
-                  className="rounded-full"
-                />
+              {/* Icon with #128C7E color */}
+              <div 
+                className="w-14 h-14 flex items-center justify-center rounded-full text-white font-bold text-xl mr-4"
+                style={{ backgroundColor: '#128C7E' }}
+              >
+                {initials}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
-                    {contact.name}
-                  </h3>
-                  <span className="text-xs text-gray-500">
-                    {lastMessage.time}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 truncate">
-                  {lastMessage.text}
-                </p>
+
+              {/* Name centered vertically */}
+              <div className="flex-1 flex flex-col justify-center">
+                <h3 className="text-base font-semibold text-gray-900">
+                  {contact.name}
+                </h3>
               </div>
             </div>
           );

@@ -3,11 +3,9 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    // Parse the raw request body
     const rawBody = await request.text();
     console.log('Raw Webhook Payload:', rawBody);
 
-    // Parse the JSON
     let data;
     try {
       data = JSON.parse(rawBody);
@@ -16,7 +14,6 @@ export async function POST(request: Request) {
       return new Response('Invalid JSON payload', { status: 400 });
     }
 
-    // Extensive logging
     console.log('Parsed Webhook Data:', JSON.stringify(data, null, 2));
 
     if (data && data.object === 'whatsapp_business_account') {
@@ -28,10 +25,11 @@ export async function POST(request: Request) {
           if (change.field === 'messages') {
             const value = change.value || {};
             
-            if (value.messages && Array.isArray(value.messages) && value.messages.length > 0) {
+            if (value.messages && Array.isArray(value.messages)) {
               for (const message of value.messages) {
-                console.log('Incoming Message:', JSON.stringify(message, null, 2));
+                console.log('Processing Incoming Message:', JSON.stringify(message, null, 2));
 
+                // Handle different message types
                 if (message.type === 'text' && message.text) {
                   try {
                     const storeResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/messages`, {
@@ -41,7 +39,10 @@ export async function POST(request: Request) {
                       },
                       body: JSON.stringify({
                         phoneNumber: message.from,
-                        message: message
+                        message: {
+                          ...message,
+                          content: message.text.body
+                        }
                       }),
                     });
 
