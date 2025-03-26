@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Message, MessageStatus } from '@/types';
 
 class MessageManager {
@@ -128,9 +128,11 @@ class MessageManager {
   }
 }
 
+// Create a singleton instance
 const messageManager = MessageManager.getInstance();
 
-export async function POST(request: Request) {
+// POST Route Handler
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { phoneNumber, message } = body;
@@ -162,7 +164,8 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+// GET Route Handler
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const phoneNumber = searchParams.get('phoneNumber');
@@ -190,7 +193,8 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+// PUT Route Handler
+export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { messageId, status } = body;
@@ -213,4 +217,5 @@ export async function PUT(request: Request) {
   }
 }
 
+// Export singleton instance for use in other parts of the application
 export { messageManager };
