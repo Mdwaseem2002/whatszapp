@@ -1,6 +1,4 @@
 // src/app/api/webhook/route.ts
-import { NextResponse } from 'next/server';
-
 export async function POST(request: Request) {
   try {
     const rawBody = await request.text();

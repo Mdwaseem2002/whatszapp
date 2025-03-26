@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Send, ChevronLeft } from 'lucide-react';
 import { Contact, Message, MessageStatus } from '@/types';
@@ -56,28 +55,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     <div className="flex flex-col h-full bg-[#ece5dd]">
       {/* Chat header */}
       <div className="flex items-center p-3 bg-[#075E54] text-white shadow-md">
-  <button onClick={onCloseChat} className="mr-3">
-    <ChevronLeft size={24} />
-  </button>
-  <div className="w-10 h-10 flex items-center justify-center bg-gray-500 rounded-full mr-3">
-    <span className="text-lg font-bold uppercase">
-      {contact.name.charAt(0)}
-    </span>
-  </div>
-  <div>
-    <h2 className="font-bold">{contact.name}</h2>
-    <p className="text-xs text-gray-300">
-      {contact.lastSeen ? `Last seen ${formatTimestamp(contact.lastSeen)}` : 'Offline'}
-    </p>
-  </div>
-  <button
-    onClick={onSimulateIncoming}
-    className="ml-auto text-xs bg-green-600 px-2 py-1 rounded opacity-50 hover:opacity-100"
-  >
-    Test Receive
-  </button>
-</div>
-
+        <button onClick={onCloseChat} className="mr-3">
+          <ChevronLeft size={24} />
+        </button>
+        <div className="w-10 h-10 flex items-center justify-center bg-gray-500 rounded-full mr-3">
+          <span className="text-lg font-bold uppercase">
+            {contact.name.charAt(0)}
+          </span>
+        </div>
+        <div>
+          <h2 className="font-bold">{contact.name}</h2>
+          <p className="text-xs text-gray-300">
+            {contact.lastSeen ? `Last seen ${formatTimestamp(contact.lastSeen)}` : 'Offline'}
+          </p>
+        </div>
+        <button
+          onClick={onSimulateIncoming}
+          className="ml-auto text-xs bg-green-600 px-2 py-1 rounded opacity-50 hover:opacity-100"
+        >
+          Test Receive
+        </button>
+      </div>
 
       {/* Chat messages */}
       <div

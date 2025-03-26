@@ -54,7 +54,7 @@ const ChatList: React.FC<ChatListProps> = ({
                 isSelected ? 'bg-gray-100' : ''
               }`}
             >
-              {/* Icon with #128C7E color */}
+              {/* Circular Icon with Initials */}
               <div 
                 className="w-14 h-14 flex items-center justify-center rounded-full text-white font-bold text-xl mr-4"
                 style={{ backgroundColor: '#128C7E' }}
@@ -62,12 +62,22 @@ const ChatList: React.FC<ChatListProps> = ({
                 {initials}
               </div>
 
-              {/* Name centered vertically */}
+              {/* Contact Name and Last Message */}
               <div className="flex-1 flex flex-col justify-center">
                 <h3 className="text-base font-semibold text-gray-900">
                   {contact.name}
                 </h3>
+                <p className="text-sm text-gray-500 truncate">
+                  {lastMessage.text}
+                </p>
               </div>
+
+              {/* Last Message Timestamp */}
+              {lastMessage.time && (
+                <span className="text-xs text-gray-400 ml-auto">
+                  {lastMessage.time}
+                </span>
+              )}
             </div>
           );
         })
