@@ -19,24 +19,19 @@ class MessageManager {
   }
 
   private ensureValidDate(timestamp: string | number | Date | undefined): Date {
-    // Handle undefined case
     if (timestamp === undefined) {
       return new Date();
     }
 
-    // Handle Unix timestamp (seconds since epoch)
     if (typeof timestamp === 'number') {
-      // Check if it's in milliseconds or seconds
       return timestamp > 9999999999 ? new Date(timestamp) : new Date(timestamp * 1000);
     }
     
-    // Handle string Unix timestamp
     if (typeof timestamp === 'string' && /^\d+$/.test(timestamp)) {
       const num = parseInt(timestamp, 10);
       return num > 9999999999 ? new Date(num) : new Date(num * 1000);
     }
     
-    // Handle ISO string or other Date-parsable format
     const date = new Date(timestamp);
     return isNaN(date.getTime()) ? new Date() : date;
   }
@@ -45,7 +40,6 @@ class MessageManager {
     const normalizedNumber = this.normalizePhoneNumber(phoneNumber);
     const timestamp = this.ensureValidDate(messageData.timestamp);
 
-    // Create complete message object
     const newMessage: Message = {
       id: messageData.id || Date.now().toString(),
       content: messageData.content || '',
@@ -54,11 +48,9 @@ class MessageManager {
       status: messageData.status || MessageStatus.DELIVERED,
       recipientId: normalizedNumber,
       contactPhoneNumber: phoneNumber,
-      // Add any additional fields from messageData
       ...messageData
     };
 
-    // Prevent duplicates with same content within 1 second
     const isDuplicate = this.messages.some(
       msg => msg.content === newMessage.content && 
              msg.contactPhoneNumber === newMessage.contactPhoneNumber &&
@@ -79,7 +71,6 @@ class MessageManager {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
       
-      // If timestamps are equal, sort by ID to maintain consistent order
       if (timeA === timeB) {
         return a.id.localeCompare(b.id);
       }
@@ -94,7 +85,6 @@ class MessageManager {
       msg => this.normalizePhoneNumber(msg.contactPhoneNumber) === normalizedNumber
     );
     
-    // Create a new sorted array to ensure proper ordering
     return [...filtered].sort((a, b) => {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
@@ -103,7 +93,6 @@ class MessageManager {
   }
 
   public getAllMessages(): Message[] {
-    // Return a new sorted array
     return [...this.messages].sort((a, b) => {
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
@@ -128,10 +117,9 @@ class MessageManager {
   }
 }
 
-// Create a singleton instance
-const messageManager = MessageManager.getInstance();
+// Instantiate the singleton outside of the route handlers
+const messageManagerInstance = MessageManager.getInstance();
 
-// POST Route Handler
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -144,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newMessage = messageManager.addMessage(phoneNumber, {
+    const newMessage = messageManagerInstance.addMessage(phoneNumber, {
       content: message.text?.body || message.content,
       timestamp: message.timestamp,
       sender: message.from === 'user' ? 'user' : 'contact',
@@ -164,7 +152,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET Route Handler
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -177,7 +164,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const messages = messageManager.getMessages(phoneNumber);
+    const messages = messageManagerInstance.getMessages(phoneNumber);
 
     return NextResponse.json({ 
       success: true,
@@ -193,7 +180,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT Route Handler
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -206,7 +192,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const success = messageManager.updateMessageStatus(messageId, status);
+    const success = messageManagerInstance.updateMessageStatus(messageId, status);
     return NextResponse.json({ success });
   } catch (error) {
     console.error('Error updating message status:', error);
@@ -216,6 +202,3 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
-
-// Export singleton instance for use in other parts of the application
-export { messageManager };
