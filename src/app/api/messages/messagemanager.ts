@@ -1,18 +1,18 @@
-import { NextResponse } from 'next/server';
-import { Message, MessageStatus } from '@/types';
+import { MessageStatus } from '@prisma/client';
 
-class MessageManager {
-  private static instance: MessageManager;
+export interface Message {
+  id: string;
+  content: string;
+  timestamp: string;
+  sender: 'user' | 'contact';
+  status: MessageStatus;
+  recipientId: string;
+  contactPhoneNumber: string;
+  [key: string]: unknown;
+}
+
+export class MessageManager {
   private messages: Message[] = [];
-
-  private constructor() {}
-
-  public static getInstance(): MessageManager {
-    if (!MessageManager.instance) {
-      MessageManager.instance = new MessageManager();
-    }
-    return MessageManager.instance;
-  }
 
   private normalizePhoneNumber(phoneNumber: string): string {
     return phoneNumber.replace(/[^\d+]/g, '');
@@ -127,90 +127,3 @@ class MessageManager {
     return messages.length > 0 ? messages[messages.length - 1] : null;
   }
 }
-
-const messageManager = MessageManager.getInstance();
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { phoneNumber, message } = body;
-
-    if (!phoneNumber || !message) {
-      return NextResponse.json(
-        { error: 'Missing phone number or message' },
-        { status: 400 }
-      );
-    }
-
-    const newMessage = messageManager.addMessage(phoneNumber, {
-      content: message.text?.body || message.content,
-      timestamp: message.timestamp,
-      sender: message.from === 'user' ? 'user' : 'contact',
-      status: message.status || MessageStatus.DELIVERED
-    });
-
-    return NextResponse.json({ 
-      success: !!newMessage, 
-      message: newMessage 
-    });
-  } catch (error) {
-    console.error('Message Storage Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: String(error) },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const phoneNumber = searchParams.get('phoneNumber');
-
-    if (!phoneNumber) {
-      return NextResponse.json(
-        { error: 'Phone number is required' },
-        { status: 400 }
-      );
-    }
-
-    const messages = messageManager.getMessages(phoneNumber);
-
-    return NextResponse.json({ 
-      success: true,
-      messages,
-      count: messages.length
-    });
-  } catch (error) {
-    console.error('Error retrieving messages:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const { messageId, status } = body;
-
-    if (!messageId || !status) {
-      return NextResponse.json(
-        { error: 'Missing message ID or status' },
-        { status: 400 }
-      );
-    }
-
-    const success = messageManager.updateMessageStatus(messageId, status);
-    return NextResponse.json({ success });
-  } catch (error) {
-    console.error('Error updating message status:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export { messageManager };
