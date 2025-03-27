@@ -42,6 +42,11 @@ class MessageManager {
   }
 
   public addMessage(phoneNumber: string, messageData: Partial<Message>): Message | null {
+    // Ensure phoneNumber is a non-empty string
+    if (!phoneNumber) {
+      throw new Error('Phone number is required');
+    }
+
     const normalizedNumber = this.normalizePhoneNumber(phoneNumber);
     const timestamp = this.ensureValidDate(messageData.timestamp);
 
@@ -91,7 +96,11 @@ class MessageManager {
   public getMessages(phoneNumber: string): Message[] {
     const normalizedNumber = this.normalizePhoneNumber(phoneNumber);
     const filtered = this.messages.filter(
-      msg => this.normalizePhoneNumber(msg.contactPhoneNumber) === normalizedNumber
+      msg => {
+        // Add a null/undefined check before normalization
+        if (!msg.contactPhoneNumber) return false;
+        return this.normalizePhoneNumber(msg.contactPhoneNumber) === normalizedNumber;
+      }
     );
     
     // Create a new sorted array to ensure proper ordering
@@ -136,15 +145,23 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { phoneNumber, message } = body;
 
-    if (!phoneNumber || !message) {
+    // Validate inputs with more robust type checking
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
       return NextResponse.json(
-        { error: 'Missing phone number or message' },
+        { error: 'Invalid or missing phone number' },
+        { status: 400 }
+      );
+    }
+
+    if (!message || typeof message !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid or missing message' },
         { status: 400 }
       );
     }
 
     const newMessage = messageManager.addMessage(phoneNumber, {
-      content: message.text?.body || message.content,
+      content: message.text?.body || message.content || '',
       timestamp: message.timestamp,
       sender: message.from === 'user' ? 'user' : 'contact',
       status: message.status || MessageStatus.DELIVERED
@@ -168,9 +185,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const phoneNumber = searchParams.get('phoneNumber');
 
-    if (!phoneNumber) {
+    // Ensure phoneNumber is a non-empty string
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
       return NextResponse.json(
-        { error: 'Phone number is required' },
+        { error: 'Valid phone number is required' },
         { status: 400 }
       );
     }
@@ -196,14 +214,22 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { messageId, status } = body;
 
-    if (!messageId || !status) {
+    // Validate inputs with more robust type checking
+    if (!messageId || typeof messageId !== 'string') {
       return NextResponse.json(
-        { error: 'Missing message ID or status' },
+        { error: 'Invalid or missing message ID' },
         { status: 400 }
       );
     }
 
-    const success = messageManager.updateMessageStatus(messageId, status);
+    if (!status || typeof status !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid or missing status' },
+        { status: 400 }
+      );
+    }
+
+    const success = messageManager.updateMessageStatus(messageId, status as MessageStatus);
     return NextResponse.json({ success });
   } catch (error) {
     console.error('Error updating message status:', error);
