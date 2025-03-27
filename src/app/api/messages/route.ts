@@ -4,8 +4,12 @@ import { Message, MessageStatus } from '@/types';
 class MessageManager {
   private static instance: MessageManager;
   private messages: Message[] = [];
+  private persistentMessages: { [phoneNumber: string]: Message[] } = {};
 
-  private constructor() {}
+  private constructor() {
+    // Load persistent messages from local storage on initialization
+    this.loadPersistentMessages();
+  }
 
   public static getInstance(): MessageManager {
     if (!MessageManager.instance) {
@@ -19,30 +23,44 @@ class MessageManager {
   }
 
   private ensureValidDate(timestamp: string | number | Date | undefined): Date {
-    // Handle undefined case
+    // Existing date validation logic remains the same
     if (timestamp === undefined) {
       return new Date();
     }
 
-    // Handle Unix timestamp (seconds since epoch)
     if (typeof timestamp === 'number') {
-      // Check if it's in milliseconds or seconds
       return timestamp > 9999999999 ? new Date(timestamp) : new Date(timestamp * 1000);
     }
     
-    // Handle string Unix timestamp
     if (typeof timestamp === 'string' && /^\d+$/.test(timestamp)) {
       const num = parseInt(timestamp, 10);
       return num > 9999999999 ? new Date(num) : new Date(num * 1000);
     }
     
-    // Handle ISO string or other Date-parsable format
     const date = new Date(timestamp);
     return isNaN(date.getTime()) ? new Date() : date;
   }
 
+  private loadPersistentMessages(): void {
+    if (typeof window !== 'undefined') {
+      const storedMessages = localStorage.getItem('persistentMessages');
+      if (storedMessages) {
+        try {
+          this.persistentMessages = JSON.parse(storedMessages);
+        } catch (error) {
+          console.error('Error loading persistent messages:', error);
+        }
+      }
+    }
+  }
+
+  private savePersistentMessages(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('persistentMessages', JSON.stringify(this.persistentMessages));
+    }
+  }
+
   public addMessage(phoneNumber: string, messageData: Partial<Message>): Message | null {
-    // Ensure phoneNumber is a non-empty string
     if (!phoneNumber) {
       throw new Error('Phone number is required');
     }
@@ -50,7 +68,6 @@ class MessageManager {
     const normalizedNumber = this.normalizePhoneNumber(phoneNumber);
     const timestamp = this.ensureValidDate(messageData.timestamp);
 
-    // Create complete message object
     const newMessage: Message = {
       id: messageData.id || Date.now().toString(),
       content: messageData.content || '',
@@ -59,11 +76,10 @@ class MessageManager {
       status: messageData.status || MessageStatus.DELIVERED,
       recipientId: normalizedNumber,
       contactPhoneNumber: phoneNumber,
-      // Add any additional fields from messageData
       ...messageData
     };
 
-    // Prevent duplicates with same content within 1 second
+    // Check for duplicates within 1 second
     const isDuplicate = this.messages.some(
       msg => msg.content === newMessage.content && 
              msg.contactPhoneNumber === newMessage.contactPhoneNumber &&
@@ -71,8 +87,19 @@ class MessageManager {
     );
 
     if (!isDuplicate) {
+      // Add to current messages
       this.messages.push(newMessage);
       this.sortMessages();
+
+      // Add to persistent messages for the specific phone number
+      if (!this.persistentMessages[normalizedNumber]) {
+        this.persistentMessages[normalizedNumber] = [];
+      }
+      this.persistentMessages[normalizedNumber].push(newMessage);
+      
+      // Save to local storage
+      this.savePersistentMessages();
+
       return newMessage;
     }
 
@@ -84,7 +111,6 @@ class MessageManager {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
       
-      // If timestamps are equal, sort by ID to maintain consistent order
       if (timeA === timeB) {
         return a.id.localeCompare(b.id);
       }
@@ -95,16 +121,12 @@ class MessageManager {
 
   public getMessages(phoneNumber: string): Message[] {
     const normalizedNumber = this.normalizePhoneNumber(phoneNumber);
-    const filtered = this.messages.filter(
-      msg => {
-        // Add a null/undefined check before normalization
-        if (!msg.contactPhoneNumber) return false;
-        return this.normalizePhoneNumber(msg.contactPhoneNumber) === normalizedNumber;
-      }
-    );
     
-    // Create a new sorted array to ensure proper ordering
-    return [...filtered].sort((a, b) => {
+    // Retrieve messages from persistent storage for the phone number
+    const persistentMessages = this.persistentMessages[normalizedNumber] || [];
+    
+    // Sort and return persistent messages
+    return [...persistentMessages].sort((a, b) => {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
       return timeA - timeB;
@@ -112,23 +134,44 @@ class MessageManager {
   }
 
   public getAllMessages(): Message[] {
-    // Return a new sorted array
-    return [...this.messages].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+    // Compile messages from all phone numbers
+    const allMessages = Object.values(this.persistentMessages)
+      .flat()
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    return allMessages;
   }
 
   public updateMessageStatus(messageId: string, status: MessageStatus): boolean {
-    const message = this.messages.find(msg => msg.id === messageId);
-    if (message) {
-      message.status = status;
-      return true;
+    let updated = false;
+
+    // Update in persistent messages across all phone numbers
+    Object.keys(this.persistentMessages).forEach(phoneNumber => {
+      const messages = this.persistentMessages[phoneNumber];
+      const messageIndex = messages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex !== -1) {
+        messages[messageIndex].status = status;
+        updated = true;
+      }
+    });
+
+    // Save updated messages
+    if (updated) {
+      this.savePersistentMessages();
     }
-    return false;
+
+    return updated;
   }
 
   public clearMessages(): void {
     this.messages = [];
+    this.persistentMessages = {};
+    
+    // Clear local storage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('persistentMessages');
+    }
   }
 
   public getLastMessage(phoneNumber: string): Message | null {
@@ -145,7 +188,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { phoneNumber, message } = body;
 
-    // Validate inputs with more robust type checking
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return NextResponse.json(
         { error: 'Invalid or missing phone number' },
@@ -185,7 +227,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const phoneNumber = searchParams.get('phoneNumber');
 
-    // Ensure phoneNumber is a non-empty string
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return NextResponse.json(
         { error: 'Valid phone number is required' },
@@ -214,7 +255,6 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { messageId, status } = body;
 
-    // Validate inputs with more robust type checking
     if (!messageId || typeof messageId !== 'string') {
       return NextResponse.json(
         { error: 'Invalid or missing message ID' },

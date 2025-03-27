@@ -228,13 +228,14 @@ export default function Home() {
         <div className="p-4 flex justify-between items-center bg-[#075E54] text-white">
 
           <div className="flex items-center">
-            <Image 
-              src="/whatsapp-logo.png" 
-              alt="WhatsApp Logo" 
-              width={30} 
-              height={30} 
-              className="mr-2"
-            />
+          <Image 
+            src="/image-removebg-preview (21).png" 
+            alt="WhatsApp Logo" 
+            width={60} 
+            height={60} 
+            className="mr-2"
+          />
+
             <h1 className="text-xl font-bold">WhatsZapp</h1>
           </div>
           {isConfigured ? (
