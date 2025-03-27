@@ -27,8 +27,10 @@ export interface Contact {
     mediaUrl?: string;
     mediaType?: 'image' | 'audio' | 'video' | 'document';
     contactPhoneNumber?: string; // Add this field
+    conversationId?: string;
+    originalId?: string;
   }
-  
+
   // WhatsApp configuration settings
   export interface WhatsAppConfig {
     accessToken: string;
@@ -123,4 +125,5 @@ export interface Contact {
     lastSeen?: string;
     phoneNumber: string;
   }
+  
   
