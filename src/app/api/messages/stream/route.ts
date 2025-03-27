@@ -1,12 +1,11 @@
-// src/app/api/messages/stream/route.ts
 import { NextResponse } from 'next/server';
 import { Message } from '@/types';
 
 // Simple in-memory event emitter for demonstration
 const messageEmitters: Record<string, Set<(message: Message) => void>> = {};
 
-// Function to broadcast a message to interested listeners
-export function broadcastMessage(phoneNumber: string, message: Message) {
+// Internal function for broadcasting messages (not exported)
+function broadcastMessageInternal(phoneNumber: string, message: Message) {
   const emitters = messageEmitters[phoneNumber];
   if (emitters) {
     emitters.forEach(emitter => emitter(message));
@@ -51,4 +50,32 @@ export async function GET(request: Request) {
       'Connection': 'keep-open'
     }
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { phoneNumber, message } = body;
+
+    if (!phoneNumber || !message) {
+      return NextResponse.json(
+        { error: 'Missing phone number or message' },
+        { status: 400 }
+      );
+    }
+
+    // Broadcast the message internally
+    broadcastMessageInternal(phoneNumber, message);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Message broadcasted' 
+    });
+  } catch (error) {
+    console.error('Message Broadcast Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: String(error) },
+      { status: 500 }
+    );
+  }
 }
