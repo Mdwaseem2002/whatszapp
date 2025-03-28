@@ -1,3 +1,4 @@
+//src\components\ChatComponent.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -22,8 +23,8 @@ interface ChatComponentProps {
 export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [, setError] = useState<string | null>(null);
 
-  // Enhanced fetch messages function with improved sorting
   const fetchMessages = useCallback(async () => {
     try {
       const response = await axios.get(`/api/messages`, {
@@ -33,7 +34,8 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
         }
       });
       
-      // Convert and sort all messages chronologically
+      console.log('Fetched Messages:', response.data);
+      
       const processedMessages = (response.data.messages || []).map((msg: Message) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
@@ -42,17 +44,13 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
       
-      // Update messages, ensuring no duplicates
       setMessages(prevMessages => {
-        // Create a map of existing message IDs for efficient comparison
         const existingMessageIds = new Set(prevMessages.map(m => m.id));
         
-        // Filter out duplicate messages
         const newUniqueMessages = processedMessages.filter(
-          (          msg: { id: string; }) => !existingMessageIds.has(msg.id)
+          (msg: { id: string; }) => !existingMessageIds.has(msg.id)
         );
 
-        // Combine and re-sort if new messages are found
         const combinedMessages = newUniqueMessages.length > 0 
           ? [...prevMessages, ...newUniqueMessages].sort(
               (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -61,8 +59,11 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
 
         return combinedMessages;
       });
+      
+      setError(null);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setError('Failed to fetch messages. Please try again.');
     }
   }, [phoneNumber]);
 

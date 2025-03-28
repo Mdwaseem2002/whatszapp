@@ -1,3 +1,4 @@
+//src\lib\mongodb.ts
 import mongoose from 'mongoose';
 
 // Extend the global interface to include our custom mongoose property
