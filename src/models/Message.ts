@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
-import { MessageStatus } from '@/types';
+import { Message, MessageStatus } from '@/types';
 
 const MessageSchema = new mongoose.Schema({
   id: { 
     type: String, 
-    required: true, 
-    unique: true 
+    required: true,
+    unique: true
   },
   content: { 
     type: String, 
@@ -13,7 +13,6 @@ const MessageSchema = new mongoose.Schema({
   },
   timestamp: { 
     type: Date, 
-    required: true, 
     default: Date.now 
   },
   sender: { 
@@ -34,13 +33,24 @@ const MessageSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  conversationId: { 
-    type: String, 
-    required: true 
+  conversationId: {
+    type: String,
+    required: true
   },
-  originalId: String
+  originalId: {
+    type: String,
+    default: null
+  }
+}, {
+  timestamps: true
 });
 
-const MessageModel = mongoose.models.Message || mongoose.model('Message', MessageSchema);
+// Ensure unique index on id
+MessageSchema.index({ id: 1 }, { unique: true });
 
-export default MessageModel;
+// Remove any existing model to prevent recompilation warnings
+if (mongoose.models.Message) {
+  delete mongoose.models.Message;
+}
+
+export default mongoose.model<Message>('Message', MessageSchema);
