@@ -1,4 +1,3 @@
-//src\app\api\messages\route.ts
 import { NextResponse } from 'next/server';
 import connectMongoDB from '@/lib/mongodb';
 import MessageModel from '@/models/Message';
@@ -27,16 +26,17 @@ export async function POST(request: Request) {
 
     // Prepare message data
     const messageData: Partial<Message> = {
-      // Use a combination of timestamp and original ID for uniqueness
       id: `${Date.now()}_${message.id || 'generated'}`,
       content: message.text?.body || message.content || '',
-      timestamp: message.timestamp ? new Date(Number(message.timestamp) * 1000) : new Date(),
+      timestamp: message.timestamp
+        ? new Date(Number(message.timestamp) * 1000).toISOString()
+        : new Date().toISOString(), // Convert Date to ISO string
       sender: message.from === 'user' ? 'user' : 'contact',
       status: message.status || MessageStatus.DELIVERED,
       recipientId: phoneNumber,
       contactPhoneNumber: phoneNumber,
       originalId: message.id,
-      conversationId: phoneNumber // Explicitly set as string
+      conversationId: phoneNumber, // Explicitly set as string
     };
 
     try {
@@ -45,32 +45,39 @@ export async function POST(request: Request) {
       const savedMessage = await newMessage.save();
 
       // Send response for webhook
-      return NextResponse.json({ 
-        success: true, 
-        message: savedMessage 
+      return NextResponse.json({
+        success: true,
+        message: savedMessage,
       });
+    } catch (saveError: unknown) {
+      if (typeof saveError === 'object' && saveError !== null && 'code' in saveError) {
+        const errorWithCode = saveError as { code: number };
+        if (errorWithCode.code === 11000) {
+          return NextResponse.json(
+            { error: 'Duplicate message', success: false },
+            { status: 409 }
+          );
+        }
+      }
 
-    } catch (saveError: any) {
-      // Handle duplicate key errors
-      if (saveError.code === 11000) {
+      if (saveError instanceof Error) {
+        console.error('Message Save Error:', saveError);
         return NextResponse.json(
-          { error: 'Duplicate message', success: false },
-          { status: 409 }
+          {
+            error: 'Error saving message',
+            success: false,
+            details: saveError.message,
+          },
+          { status: 500 }
         );
       }
 
-      console.error('Message Save Error:', saveError);
       return NextResponse.json(
-        { 
-          error: 'Error saving message', 
-          success: false, 
-          details: saveError.message,
-          validationErrors: saveError.errors 
-        },
+        { error: 'Unknown error occurred', success: false },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Message Storage Error:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
@@ -96,20 +103,20 @@ export async function GET(request: Request) {
     }
 
     // Build query with optional timestamp filter
-    const query: any = { conversationId };
+    const query: Record<string, unknown> = { conversationId };
     if (afterTimestamp) {
-      query.timestamp = { $gt: new Date(afterTimestamp) };
+      query.timestamp = { $gt: new Date(afterTimestamp).toISOString() }; // Ensure timestamp is a string
     }
 
     // Retrieve messages for the specific conversation, sorted by timestamp
     const messages = await MessageModel.find(query).sort({ timestamp: 1 });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       messages,
-      count: messages.length
+      count: messages.length,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error retrieving messages:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

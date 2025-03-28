@@ -49,7 +49,7 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
         
         // Filter out duplicate messages
         const newUniqueMessages = processedMessages.filter(
-          msg => !existingMessageIds.has(msg.id)
+          (          msg: { id: string; }) => !existingMessageIds.has(msg.id)
         );
 
         // Combine and re-sort if new messages are found
