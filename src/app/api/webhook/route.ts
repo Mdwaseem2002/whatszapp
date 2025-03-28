@@ -1,4 +1,18 @@
 // src/app/api/webhook/route.ts
+import { NextResponse } from 'next/server';
+import connectMongoDB from '@/lib/mongodb';
+
+// Enable CORS and handle preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -7,14 +21,27 @@ export async function GET(request: Request) {
   const challenge = searchParams.get("hub.challenge");
 
   if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    return new Response(challenge, { status: 200 });
+    return new NextResponse(challenge, { 
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   } else {
-    return new Response("Forbidden", { status: 403 });
+    return new NextResponse("Forbidden", { 
+      status: 403,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    // Ensure MongoDB connection
+    await connectMongoDB();
+
     const rawBody = await request.text();
     console.log("Raw Webhook Payload:", rawBody);
 
@@ -23,7 +50,12 @@ export async function POST(request: Request) {
       data = JSON.parse(rawBody);
     } catch (parseError) {
       console.error("Failed to parse webhook payload:", parseError);
-      return new Response("Invalid JSON payload", { status: 400 });
+      return new NextResponse("Invalid JSON payload", { 
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
     }
 
     if (data && data.object === "whatsapp_business_account") {
@@ -38,8 +70,11 @@ export async function POST(request: Request) {
 
                 if (message.type === "text" && message.text) {
                   try {
+                    // Use absolute URL for production
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                    
                     const storeResponse = await fetch(
-                      `${process.env.NEXT_PUBLIC_APP_URL}/api/messages`,
+                      `${appUrl}/api/messages`,
                       {
                         method: "POST",
                         headers: {
@@ -49,6 +84,8 @@ export async function POST(request: Request) {
                           phoneNumber: message.from,
                           message: {
                             ...message,
+                            text: { body: message.text.body },
+                            from: 'contact',
                             content: message.text.body,
                           },
                         }),
@@ -67,15 +104,28 @@ export async function POST(request: Request) {
         }
       }
 
-      return new Response("EVENT_RECEIVED", {
+      return new NextResponse("EVENT_RECEIVED", {
         status: 200,
-        headers: { "Content-Type": "text/plain" },
+        headers: {
+          'Content-Type': 'text/plain',
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
-    return new Response("Not a WhatsApp event", { status: 200 });
+    return new NextResponse("Not a WhatsApp event", { 
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   } catch (error) {
     console.error("Comprehensive Webhook Error:", error);
-    return new Response("Error processing webhook", { status: 200 });
+    return new NextResponse("Error processing webhook", { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }

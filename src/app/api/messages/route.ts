@@ -1,3 +1,4 @@
+//src\app\api\messages\route.ts
 import { NextResponse } from 'next/server';
 import connectMongoDB from '@/lib/mongodb';
 import MessageModel from '@/models/Message';

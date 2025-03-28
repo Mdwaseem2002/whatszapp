@@ -1,3 +1,4 @@
+//src\models\Message.ts
 import mongoose from 'mongoose';
 import { Message, MessageStatus } from '@/types';
 
