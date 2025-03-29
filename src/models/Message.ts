@@ -1,4 +1,4 @@
-//src\models\Message.ts
+// src/models/Message.ts
 import mongoose from 'mongoose';
 import { Message, MessageStatus } from '@/types';
 
@@ -6,7 +6,7 @@ const MessageSchema = new mongoose.Schema({
   id: { 
     type: String, 
     required: true,
-    unique: true
+    // Remove the unique: true here since we're adding an index below
   },
   content: { 
     type: String, 
@@ -46,12 +46,10 @@ const MessageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure unique index on id
+// Create the index only once, fixing the duplicate index warning
 MessageSchema.index({ id: 1 }, { unique: true });
 
-// Remove any existing model to prevent recompilation warnings
-if (mongoose.models.Message) {
-  delete mongoose.models.Message;
-}
+// Check if model exists before creating it
+const MessageModel = mongoose.models.Message || mongoose.model<Message>('Message', MessageSchema);
 
-export default mongoose.model<Message>('Message', MessageSchema);
+export default MessageModel;

@@ -1,3 +1,4 @@
+// src/lib/mongodb.ts
 import mongoose from 'mongoose';
 
 // Ensure MONGODB_URI is defined at runtime
@@ -40,7 +41,13 @@ async function connectMongoDB(): Promise<mongoose.Connection> {
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      socketTimeoutMS: 30000,
+      // Increased timeouts for Vercel serverless environment
+      socketTimeoutMS: 60000, // Increased from 30000
+      connectTimeoutMS: 60000, // Added explicit connect timeout
+      // Add serverSelectionTimeoutMS
+      serverSelectionTimeoutMS: 10000,
+      // Keep the connection alive
+      maxPoolSize: 10,
       retryWrites: true,
     };
 
@@ -52,6 +59,8 @@ async function connectMongoDB(): Promise<mongoose.Connection> {
       })
       .catch((error) => {
         console.error('MongoDB connection error:', error);
+        // Reset promise on error so we can retry next time
+        cached.promise = null;
         throw error;
       });
   }

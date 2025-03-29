@@ -1,12 +1,26 @@
-//src\app\api\messages\route.ts
+// src/app/api/messages/route.ts
 import { NextResponse } from 'next/server';
 import connectMongoDB from '@/lib/mongodb';
 import MessageModel from '@/models/Message';
 import { Message, MessageStatus } from '@/types';
 
+// Added timeout handling for serverless functions
+const TIMEOUT = 9000; // 9 seconds (Vercel has a 10s limit for hobby plans)
+
+// Helper function to create a timeout promise
+const createTimeout = (ms: number) => {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Operation timed out after ${ms}ms`));
+    }, ms);
+  });
+};
+
 export async function POST(request: Request) {
   try {
-    await connectMongoDB();
+    // Connect to MongoDB with timeout protection
+    const dbPromise = connectMongoDB();
+    await Promise.race([dbPromise, createTimeout(TIMEOUT)]);
 
     const body = await request.json();
     const { phoneNumber, message } = body;
@@ -31,19 +45,20 @@ export async function POST(request: Request) {
       content: message.text?.body || message.content || '',
       timestamp: message.timestamp
         ? new Date(Number(message.timestamp) * 1000).toISOString()
-        : new Date().toISOString(), // Convert Date to ISO string
+        : new Date().toISOString(),
       sender: message.from === 'user' ? 'user' : 'contact',
       status: message.status || MessageStatus.DELIVERED,
       recipientId: phoneNumber,
       contactPhoneNumber: phoneNumber,
       originalId: message.id,
-      conversationId: phoneNumber, // Explicitly set as string
+      conversationId: phoneNumber,
     };
 
     try {
-      // Create and save new message
+      // Create and save new message with timeout protection
       const newMessage = new MessageModel(messageData);
-      const savedMessage = await newMessage.save();
+      const savePromise = newMessage.save();
+      const savedMessage = await Promise.race([savePromise, createTimeout(TIMEOUT)]);
 
       // Send response for webhook
       return NextResponse.json({
@@ -61,27 +76,23 @@ export async function POST(request: Request) {
         }
       }
 
-      if (saveError instanceof Error) {
-        console.error('Message Save Error:', saveError);
-        return NextResponse.json(
-          {
-            error: 'Error saving message',
-            success: false,
-            details: saveError.message,
-          },
-          { status: 500 }
-        );
-      }
-
+      console.error('Message Save Error:', saveError);
       return NextResponse.json(
-        { error: 'Unknown error occurred', success: false },
+        {
+          error: 'Error saving message',
+          success: false,
+          details: saveError instanceof Error ? saveError.message : 'Unknown error',
+        },
         { status: 500 }
       );
     }
   } catch (error: unknown) {
     console.error('Message Storage Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: String(error) },
+      { 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
@@ -89,7 +100,9 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    await connectMongoDB();
+    // Connect to MongoDB with timeout protection
+    const dbPromise = connectMongoDB();
+    await Promise.race([dbPromise, createTimeout(TIMEOUT)]);
 
     const { searchParams } = new URL(request.url);
     const phoneNumber = searchParams.get('phoneNumber');
@@ -106,21 +119,25 @@ export async function GET(request: Request) {
     // Build query with optional timestamp filter
     const query: Record<string, unknown> = { conversationId };
     if (afterTimestamp) {
-      query.timestamp = { $gt: new Date(afterTimestamp).toISOString() }; // Ensure timestamp is a string
+      query.timestamp = { $gt: new Date(afterTimestamp).toISOString() };
     }
 
-    // Retrieve messages for the specific conversation, sorted by timestamp
-    const messages = await MessageModel.find(query).sort({ timestamp: 1 });
+    // Retrieve messages with timeout protection
+    const findPromise = MessageModel.find(query).sort({ timestamp: 1 }).lean();
+    const messages = await Promise.race([findPromise, createTimeout(TIMEOUT)]);
 
     return NextResponse.json({
       success: true,
       messages,
-      count: messages.length,
+      count: Array.isArray(messages) ? messages.length : 0,
     });
   } catch (error: unknown) {
     console.error('Error retrieving messages:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
