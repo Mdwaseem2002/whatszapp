@@ -6,50 +6,31 @@ const MessageSchema = new mongoose.Schema({
   id: { 
     type: String, 
     required: true,
-    // Remove the unique: true here since we're adding an index below
+    index: true,
+    unique: true 
   },
-  content: { 
-    type: String, 
-    required: true 
-  },
-  timestamp: { 
-    type: Date, 
-    default: Date.now 
-  },
-  sender: { 
-    type: String, 
-    enum: ['user', 'contact'], 
-    required: true 
-  },
+  content: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  sender: { type: String, enum: ['user', 'contact'], required: true },
   status: { 
     type: String, 
     enum: Object.values(MessageStatus), 
     default: MessageStatus.DELIVERED 
   },
-  recipientId: { 
-    type: String, 
-    required: true 
-  },
-  contactPhoneNumber: { 
-    type: String, 
-    required: true 
-  },
-  conversationId: {
-    type: String,
-    required: true
-  },
-  originalId: {
-    type: String,
-    default: null
-  }
+  recipientId: { type: String, required: true },
+  contactPhoneNumber: { type: String, required: true },
+  conversationId: { type: String, required: true },
+  originalId: { type: String }
 }, {
   timestamps: true
 });
 
-// Create the index only once, fixing the duplicate index warning
-MessageSchema.index({ id: 1 }, { unique: true });
+// Remove any existing model to prevent recompilation warnings
+if (mongoose.models.Message) {
+  delete mongoose.models.Message;
+}
 
-// Check if model exists before creating it
-const MessageModel = mongoose.models.Message || mongoose.model<Message>('Message', MessageSchema);
+// Create the model
+const MessageModel = mongoose.model<Message>('Message', MessageSchema);
 
 export default MessageModel;

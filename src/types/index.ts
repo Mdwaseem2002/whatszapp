@@ -1,5 +1,6 @@
 // Contact represents a WhatsApp contact/recipient
 export interface Contact {
+    online: unknown;
     id: string;
     name: string;
     phoneNumber: string;
@@ -13,11 +14,13 @@ export interface Contact {
     SENT = 'sent',
     DELIVERED = 'delivered',
     READ = 'read',
-    FAILED = 'failed'
+    FAILED = 'failed',
+    QUEUED = "QUEUED"
   }
   
   // Message represents a chat message
   export interface Message {
+    attachments: boolean;
     id: string;
     content: string;
     timestamp: string;

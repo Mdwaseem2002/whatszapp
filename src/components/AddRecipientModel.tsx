@@ -32,6 +32,7 @@ const AddRecipientModal: React.FC<AddRecipientModalProps> = ({ onAdd, onClose })
       phoneNumber,
       avatar: lastLetter, // Using last letter instead of an image
       lastSeen: new Date().toISOString(),
+      online: undefined
     });
     onClose();
   };

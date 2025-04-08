@@ -79,17 +79,17 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
         return combinedMessages;
       });
     } catch (error: unknown) { // Use 'unknown' instead of 'any'
-      console.error('Error fetching messages:', error);
-    
-      // Type guard to check if error is an instance of Error
-      if (error instanceof Error) {
-        // Don't show error UI for normal polling - only for user-initiated actions
-        if (!error.message.includes('timeout') && !error.message.includes('Network Error')) {
-          setError('Failed to load messages. Please try refreshing.');
-        }
-      }
+  console.error('Error fetching messages:', error);
+
+  // Type guard to check if error is an instance of Error
+  if (error instanceof Error) {
+    // Don't show error UI for normal polling - only for user-initiated actions
+    if (!error.message.includes('timeout') && !error.message.includes('Network Error')) {
+      setError('Failed to load messages. Please try refreshing.');
     }
-    
+  }
+}
+
   }, [phoneNumber]);
 
   // Optimized message sending with better error handling
@@ -252,6 +252,7 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
         <button 
           onClick={sendMessage}
           disabled={isLoading || !newMessage.trim()}
+
           className={`p-3 rounded-r-lg transition-colors ${
             isLoading || !newMessage.trim()
               ? 'bg-blue-300 cursor-not-allowed'
@@ -263,4 +264,5 @@ export default function ChatComponent({ phoneNumber }: ChatComponentProps) {
       </div>
     </div>
   );
+
 }

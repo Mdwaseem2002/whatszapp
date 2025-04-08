@@ -93,7 +93,8 @@ export default function Home() {
       timestamp: new Date().toISOString(),
       sender: 'user',
       status: MessageStatus.PENDING,
-      recipientId: selectedContact.phoneNumber
+      recipientId: selectedContact.phoneNumber,
+      attachments: false
     };
 
     // Update messages state with the new message
@@ -209,7 +210,8 @@ export default function Home() {
       timestamp: new Date().toISOString(),
       sender: 'contact',
       status: MessageStatus.DELIVERED,
-      recipientId: 'me'
+      recipientId: 'me',
+      attachments: false
     };
 
     setMessages(prev => {
@@ -226,7 +228,7 @@ export default function Home() {
       {/* Left side - 30% width */}
       <div className="w-3/10 h-full flex flex-col border-r border-gray-300 bg-white">
         {/* WhatsApp logo and config */}
-        <div className="p-4 flex justify-between items-center bg-[#075E54] text-white">
+        <div className="p-4 flex justify-between items-center bg-[#111B21] text-white">
 
           <div className="flex items-center">
           <Image 
@@ -254,7 +256,7 @@ export default function Home() {
           <WhatsAppConfig onSave={handleConfigSave} />
         ) : (
           <>
-            <div className="p-4 border-b border-gray-300">
+            <div className="p-4 border-b border-gray-300 bg-[#111B21]">
               <button 
                 onClick={() => setShowAddModal(true)}
                 className="w-full bg-[#075E54] text-white py-2 rounded-md font-medium hover:bg-green-600 transition"
@@ -285,11 +287,11 @@ export default function Home() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
       <Image 
-        src="/image.png"  // Updated path for public/image.png
+        src="/image-removebg-preview (22).png"  // Updated path for public/image.png
         alt="Background Image" 
         width={200} 
         height={200} 
-        className="opacity-20 mb-4"
+        className="opacity-50 mb-4"
       />
       <p className="text-xl">Select a chat to start messaging</p>
     </div>

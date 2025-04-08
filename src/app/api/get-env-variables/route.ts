@@ -1,3 +1,4 @@
+//src\app\api\get-env-variables\route.ts
 import { NextResponse } from 'next/server';
 
 export async function GET() {

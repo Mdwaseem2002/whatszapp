@@ -1,3 +1,4 @@
+//src\app\api\messages\stream\route.ts
 import { NextResponse } from 'next/server';
 import { Message } from '@/types';
 
